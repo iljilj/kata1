@@ -1,11 +1,21 @@
 package jm.task.core.jdbc.util;
 
+import jm.task.core.jdbc.model.User;
+import org.hibernate.SessionFactory;
+import org.hibernate.boot.Metadata;
+import org.hibernate.boot.MetadataSources;
+import org.hibernate.boot.registry.StandardServiceRegistry;
+import org.hibernate.boot.registry.StandardServiceRegistryBuilder;
+import org.hibernate.cfg.AvailableSettings;
+
 import java.sql.*;
+import java.util.Properties;
 
 public class Util {
     private static final String URL = "jdbc:mysql://localhost:3306/mydb";
     private static final String USERNAME = "admin";
     private static final String PASSWORD = "admin";
+    private static SessionFactory sessionFactory;
 
     public static Connection getConnection() {
         Connection connection = null;
@@ -28,17 +38,39 @@ public class Util {
         return connection;
     }
 
-    public static void closeConnection(Connection connection) {
-        if (connection != null) {
+
+    public static SessionFactory getSessionFactory() {
+        if (sessionFactory == null) {
             try {
-                connection.close();
-                System.out.println("Connection closed successfully.");
-            } catch (SQLException e) {
-                System.out.println("Failed to close connection.");
+                StandardServiceRegistryBuilder registryBuilder = new StandardServiceRegistryBuilder();
+
+                Properties properties = new Properties();
+                properties.put(AvailableSettings.DRIVER, "com.mysql.cj.jdbc.Driver");
+                properties.put(AvailableSettings.URL, URL);
+                properties.put(AvailableSettings.USER, USERNAME);
+                properties.put(AvailableSettings.PASS, PASSWORD);
+                properties.put(AvailableSettings.DIALECT, "org.hibernate.dialect.MySQL8Dialect");
+                properties.put(AvailableSettings.SHOW_SQL, "true");
+
+                registryBuilder.applySettings(properties);
+
+                StandardServiceRegistry registry = registryBuilder.build();
+
+                MetadataSources sources = new MetadataSources(registry);
+
+                sources.addAnnotatedClass(User.class);
+
+                Metadata metadata = sources.getMetadataBuilder().build();
+
+                sessionFactory = metadata.getSessionFactoryBuilder().build();
+            } catch (Exception e) {
                 e.printStackTrace();
+                if (sessionFactory != null) {
+                    sessionFactory.close();
+                }
             }
         }
+        return sessionFactory;
     }
-
 
 }
